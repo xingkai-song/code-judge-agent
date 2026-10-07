@@ -1,0 +1,21 @@
+{
+  "id": "count_unique_words",
+  "title": "不重复单词数",
+  "statement": "读入一行文本，输出其中不同单词的个数。单词按空白切分，比较时忽略大小写。",
+  "time_limit_ms": 2000,
+  "memory_limit_mb": 256,
+  "checker": "token",
+  "tags": ["字符串", "集合"],
+  "difficulty": "easy",
+  "source": "sample",
+  "cases": [
+    { "id": "c1", "stdin": "a b a\n", "expected_stdout": "2\n" },
+    {
+      "id": "c2",
+      "stdin": "Hello hello WORLD\n",
+      "expected_stdout": "2\n",
+      "note": "忽略大小写后只剩 hello 与 world"
+    },
+    { "id": "c3", "stdin": "   \n", "expected_stdout": "0\n" }
+  ]
+}

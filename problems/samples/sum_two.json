@@ -1,0 +1,21 @@
+{
+  "id": "sum_two",
+  "title": "两数之和",
+  "statement": "读入两个整数 a 和 b，输出它们的和。",
+  "time_limit_ms": 2000,
+  "memory_limit_mb": 256,
+  "checker": "token",
+  "tags": ["入门", "输入输出"],
+  "difficulty": "easy",
+  "source": "sample",
+  "cases": [
+    { "id": "c1", "stdin": "1 2\n", "expected_stdout": "3\n" },
+    { "id": "c2", "stdin": "-5 10\n", "expected_stdout": "5\n" },
+    {
+      "id": "c3",
+      "stdin": "2000000000 2000000000\n",
+      "expected_stdout": "4000000000\n",
+      "note": "边界：结果超过 32 位 int 上限，C++ 用 int 会溢出"
+    }
+  ]
+}

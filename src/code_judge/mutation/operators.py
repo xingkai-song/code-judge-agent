@@ -123,6 +123,18 @@ def _negate_condition(node: ast.If | ast.While) -> ast.AST:
     return node
 
 
+def _droppable_not_matcher(node: ast.AST) -> bool:
+    """匹配 `if not x:` / `while not x:` 这种可以直接去掉 not 的条件。"""
+    if not isinstance(node, (ast.If, ast.While)):
+        return False
+    return isinstance(node.test, ast.UnaryOp) and isinstance(node.test.op, ast.Not)
+
+
+def _drop_not(node: ast.If | ast.While) -> ast.AST:
+    node.test = node.test.operand
+    return node
+
+
 def _initializer_matcher(node: ast.AST) -> bool:
     if not isinstance(node, ast.Assign):
         return False
@@ -224,6 +236,13 @@ OPERATORS: dict[str, OperatorSpec] = {
             description="if / while 的条件整体取反",
             matcher=_condition_matcher,
             mutator=_negate_condition,
+        ),
+        OperatorSpec(
+            key="condition_negation_drop",
+            label="条件判断取反",
+            description="漏写 not，条件方向反了",
+            matcher=_droppable_not_matcher,
+            mutator=_drop_not,
         ),
         OperatorSpec(
             key="initial_value",

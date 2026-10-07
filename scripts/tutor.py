@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from code_judge.tutoring import LearnerProfile, MasteryModel, Recommender, load_problem_skills  # noqa: E402
 from code_judge.tutoring.models import Attempt  # noqa: E402
 from code_judge.tutoring.simulate import SimulatedLearner, run_experiment, run_session  # noqa: E402
-from code_judge.tutoring.skills import skill_summary  # noqa: E402
+from code_judge.diagnosis.repairs import IRREVERSIBLE_OPERATORS  # noqa: E402
+from code_judge.tutoring.skills import filter_tutorable, skill_summary  # noqa: E402
 
 MUTANTS = ROOT / "eval" / "datasets" / "mutants.jsonl"
 
@@ -44,7 +45,8 @@ def show_skills(problem_skills, labels) -> int:
     print(f"{'技能':<22}{'名称':<18}{'可考察题目数':>12}")
     print("-" * 54)
     for row in rows:
-        print(f"{row['skill']:<22}{row['label']:<18}{row['problems']:>12}")
+        mark = "" if row["skill"] not in IRREVERSIBLE_OPERATORS else "  ← 不可逆，不出题"
+        print(f"{row['skill']:<22}{row['label']:<18}{row['problems']:>12}{mark}")
     print("\n说明：这个映射不是人工标注的，是从变异数据自动推导的——")
     print("      某道题能检出 k 类错误，就说明它的测试确实能考察 k 这项技能。")
     return 0
@@ -140,6 +142,8 @@ def main() -> int:
     problem_skills, labels = load_all()
     if args.skills:
         return show_skills(problem_skills, labels)
+    # 会话与实验只用能诊断的技能
+    problem_skills, labels = filter_tutorable(problem_skills, labels)
     if args.session:
         return run_session_demo(problem_skills, labels, args)
     if args.experiment:

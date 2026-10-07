@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from code_judge.mutation.dataset import load_mutants
+from code_judge.diagnosis.repairs import IRREVERSIBLE_OPERATORS
 
 
 def load_problem_skills(path: str | Path) -> tuple[dict[str, set[str]], dict[str, str]]:
@@ -37,3 +38,24 @@ def skill_summary(problem_skills: dict[str, set[str]], labels: dict[str, str]) -
         {"skill": skill, "label": labels.get(skill, skill), "problems": n}
         for skill, n in sorted(counts.items(), key=lambda kv: -kv[1])
     ]
+
+
+def filter_tutorable(
+    problem_skills: dict[str, set[str]], labels: dict[str, str]
+) -> tuple[dict[str, set[str]], dict[str, str]]:
+    """只保留**能被诊断闭环定位**的技能。
+
+    像「删掉 break」这种不可逆的错误，诊断时无法从错误代码恢复出修复，
+    所以系统永远给不出这类错因的结论。如果还拿它当练习目标，就会出现
+    「推荐了某项技能，学生犯了这类错，系统却说不上来」的断链——
+    这项技能的掌握度也永远收不到有效信噪。
+
+    不能诊断的技能，就不该出对应的题。这条规则要在出题之前强制执行。
+    """
+    kept_labels = {k: v for k, v in labels.items() if k not in IRREVERSIBLE_OPERATORS}
+    kept: dict[str, set[str]] = {}
+    for problem_id, skills in problem_skills.items():
+        remaining = {s for s in skills if s in kept_labels}
+        if remaining:
+            kept[problem_id] = remaining
+    return kept, kept_labels

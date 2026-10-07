@@ -2,8 +2,18 @@
 
 每项技能维护一个 Beta(α, β) 后验：
 
-* 在一次**能考察该技能**的作答里，学生没有犯这类错误 → α += 1
-* 犯了这类错误 → β += 1
+更新规则（三种情况区别对待）：
+
+| 作答结果 | 更新 |
+| --- | --- |
+| 通过 | 该题覆盖的每项技能各算一次成功 → α += 1 |
+| 未通过，且诊断定位到错因 k | 只有 k 记一次失败 → β += 1 |
+| 未通过，但诊断没能定位 | **不更新任何技能** |
+
+第三种情况是必须单独处理的：诊断没定位到时，我们只知道「这题挂了」，
+不知道错在哪一项技能上。早期版本把它当成「所有技能都没犯错」，
+结果是**学生失败一次，十项技能的掌握度反而全部上升**——这是明显的建模错误。
+没有信息就不更新，比假装有信息更安全。
 
 掌握度取后验均值，不确定度取后验标准差。
 
@@ -110,14 +120,20 @@ class MasteryModel:
             return state[skill]
 
         for attempt in profile.attempts:
-            for skill in attempt.skills:
-                item = slot(skill)
-                item.opportunities += 1
-                if attempt.fault_operator == skill:
-                    item.beta += 1
-                    item.errors += 1
-                else:
+            if attempt.solved:
+                # 通过：这道题覆盖的每项技能都算一次「没犯这类错」
+                for skill in attempt.skills:
+                    item = slot(skill)
+                    item.opportunities += 1
                     item.alpha += 1
+            elif attempt.fault_operator:
+                # 失败且定位到具体错因：只有那一项技能记失败。
+                # 其余技能不给分——这次失败可能把它们的表现掩盖了。
+                item = slot(attempt.fault_operator)
+                item.opportunities += 1
+                item.beta += 1
+                item.errors += 1
+            # 失败且未定位：没有任何技能层面的信息，什么都不更新
         return state
 
     def weakest(

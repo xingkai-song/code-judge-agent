@@ -71,3 +71,21 @@ def load_any(path: str | Path) -> list[Problem]:
     if p.suffix == ".jsonl":
         return load_problems_jsonl(p)
     return [load_problem(p)]
+
+
+def load_library(root: str | Path) -> dict[str, Problem]:
+    """加载整个题库：``<root>/samples/*.json`` 加上 ``<root>/*.jsonl``。
+
+    返回 ``{problem_id: Problem}``。示例题和数据集题目合在一起，
+    这样上层（诊断、出题、交互工具）只需要拿一个字典就够。
+    """
+    root = Path(root)
+    index: dict[str, Problem] = {}
+    samples = root / "samples"
+    if samples.is_dir():
+        for problem in load_problems(samples):
+            index[problem.id] = problem
+    for path in sorted(root.glob("*.jsonl")):
+        for problem in load_problems_jsonl(path):
+            index[problem.id] = problem
+    return index

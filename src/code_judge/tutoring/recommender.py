@@ -49,7 +49,8 @@ class Recommender:
         ranked = self.mastery.weakest(profile, limit=len(self.labels) or 11)
         done = profile.attempted_problem_ids
         used_skills: set[str] = set()
-        out: list[Recommendation] = []
+        fresh: list[Recommendation] = []
+        repeats: list[Recommendation] = []
 
         for skill in ranked:
             if skill.skill in used_skills:
@@ -57,24 +58,27 @@ class Recommender:
             pick = self._pick_problem(skill.skill, done, profile)
             if pick is None:
                 continue
-            used_skills.add(skill.skill)
             problem_id, repeat, candidates = pick
-            out.append(
-                Recommendation(
-                    problem_id=problem_id,
-                    target_skill=skill.skill,
-                    target_label=skill.label,
-                    reason=self._reason(profile, skill.skill, problem_id, repeat),
-                    mastery_mean=round(skill.mean, 3),
-                    mastery_lower=round(skill.lower_bound(self.mastery.pessimism), 3),
-                    mastery_std=round(skill.std, 3),
-                    candidate_count=candidates,
-                    repeat=repeat,
-                )
+            recommendation = Recommendation(
+                problem_id=problem_id,
+                target_skill=skill.skill,
+                target_label=skill.label,
+                reason=self._reason(profile, skill.skill, problem_id, repeat),
+                mastery_mean=round(skill.mean, 3),
+                mastery_lower=round(skill.lower_bound(self.mastery.pessimism), 3),
+                mastery_std=round(skill.std, 3),
+                candidate_count=candidates,
+                repeat=repeat,
             )
-            if len(out) >= limit:
-                break
-        return out
+            # 同一道题可能同时覆盖多项技能，去重
+            bucket = repeats if repeat else fresh
+            if any(r.problem_id == problem_id for r in bucket):
+                continue
+            used_skills.add(skill.skill)
+            bucket.append(recommendation)
+
+        # 没做过的题优先推荐；只有在新题不够时才回头推做过的（复测）
+        return (fresh + repeats)[:limit]
 
     # -- 内部 ---------------------------------------------------------------
 

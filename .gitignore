@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 .workdir/
+# 密钥只放在本地 .env，绝不入库（模板见 .env.example）
+.env
 # 原始数据集可用 scripts/import_datasets.py 重新下载，不入库
 data/raw/
 # 评测报告是跑出来的，不入库（数据集本身入库，见 eval/datasets/）

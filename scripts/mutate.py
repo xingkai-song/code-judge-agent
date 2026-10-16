@@ -198,7 +198,10 @@ def main() -> int:
     print(f"共 {len(tasks)} 个候选变异体\n")
 
     sandbox = default_sandbox("local")
-    verifier = CodeVerifier(sandbox=sandbox)
+    # 变异体只需要回答「有没有全部通过」，不需要知道「哪几条挂了」，
+    # 所以用快速判题器：一条用例失败就停。大题库上这是数量级的差别
+    # （每题 8 条用例的 stdio 题，一个错误候选从 8 次进程降到 1–2 次）。
+    verifier = CodeVerifier(sandbox=sandbox, stop_on_first_failure=True)
 
     started = time.monotonic()
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:

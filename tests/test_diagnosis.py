@@ -32,6 +32,32 @@ def test_correct_submission_reports_no_fault():
     assert "没有发现错误" in explain(diagnosis)
 
 
+def test_python_syntax_error_is_passed_through_with_line_number():
+    """语法错误的代码解析不出语法树，搜索候选没有意义——直接转述解释器的原话。"""
+    source = "a = 1\nif a == 1\n    print(1)\n"  # 第 2 行少了冒号
+    diagnosis = _diagnoser().diagnose(source, _problem("sum_two"))
+
+    text = explain(diagnosis)
+    assert "语法检查" in text
+    assert "SyntaxError" in text
+    assert "line 2" in text
+    # 判题用的是临时工作目录，那条绝对路径不该泄漏给学生
+    assert "code_judge_work" not in text
+    assert diagnosis.candidates_total == 0, "语法错误不该再去搜索修复候选"
+
+
+def test_compile_error_passes_compiler_message_through():
+    """C++ 编译失败时，编译器已经把行号和原因说清楚了，原样转给学生会更好用。"""
+    source = "#include <iostream>\nint main() {\n    int a\n    return 0;\n}\n"
+    diagnosis = _diagnoser().diagnose(source, _problem("sum_two"), "cpp")
+
+    text = explain(diagnosis)
+    assert diagnosis.submitted_verdict == "CE"
+    assert "编译没有通过" in text
+    assert "error" in text
+    assert diagnosis.candidates_total == 0
+
+
 def test_arithmetic_fault_is_located_and_verified():
     diagnosis = _diagnoser().diagnose(
         _submission("sum_two", "wrong_answer.py"), _problem("sum_two")

@@ -108,20 +108,24 @@ def test_every_operator_is_registered_with_a_label():
 
 
 @pytest.mark.skipif(
-    not (ROOT / "solutions" / "humaneval.jsonl").exists(),
-    reason="未导入 HumanEval，跳过集成测试",
+    not (ROOT / "solutions" / "codecontests.jsonl").exists(),
+    reason="未导入 CodeContests，跳过集成测试",
 )
 class TestRealReferenceIntegration:
     """拿真实参考解跑一遍：生成的变异体必须真的被判错，标签才有意义。"""
 
     def test_mutants_of_real_references_are_detected_as_failures(self):
-        problems = {p.id: p for p in load_problems_jsonl(ROOT / "problems" / "humaneval.jsonl")}
-        refs = load_references(ROOT / "solutions" / "humaneval.jsonl")
+        problems = {
+            p.id: p for p in load_problems_jsonl(ROOT / "problems" / "codecontests.jsonl")
+        }
+        refs = load_references(ROOT / "solutions" / "codecontests.jsonl")
         verifier = CodeVerifier(sandbox=LocalSandbox())
 
         checked = 0
         detected = 0
-        for pid, ref in list(refs.items())[:5]:
+        # 挑用例最少的几道题，让集成测试跑得快些
+        ordered = sorted(refs.items(), key=lambda kv: len(problems[kv[0]].cases))
+        for pid, ref in ordered[:5]:
             problem = problems[pid]
             for mutant in generate_mutants(ref.source, max_per_operator=1)[:3]:
                 report = verifier.verify(mutant.source, problem, "python")

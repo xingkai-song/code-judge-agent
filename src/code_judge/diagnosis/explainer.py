@@ -24,6 +24,24 @@ def explain(diagnosis: Diagnosis) -> str:
         return "提交通过了全部测试用例，没有发现错误。"
 
     symptom = diagnosis.symptom
+
+    # 代码根本不是合法程序时，不猜、不解释，直接把编译器/解释器的原话转给学生——
+    # 那里面已经有行号、位置和原因，比任何推测都准。
+    if symptom.get("compile_error"):
+        return "\n".join([
+            "编译没有通过。编译器已经把位置和原因说清楚了：",
+            "",
+            str(symptom["compile_error"]).strip(),
+        ])
+    if symptom.get("syntax_error"):
+        return "\n".join([
+            "这段代码没有通过 Python 的语法检查，解释器的原话是：",
+            "",
+            str(symptom["syntax_error"]).strip(),
+            "",
+            "先把这一处改对，再提交一次就能继续往下分析了。",
+        ])
+
     if diagnosis.verified and diagnosis.repairs:
         repair = diagnosis.repairs[0]
         lines.append(f"诊断：{diagnosis.fault_label}（已通过判题机验证）")
@@ -57,12 +75,25 @@ def explain(diagnosis: Diagnosis) -> str:
         if symptom.get("stderr_tail"):
             lines.append(f"  · 运行错误：{symptom['stderr_tail']}")
         lines.append("")
+
+        # 定位不到时要给「错误的形状」：这些是从失败用例里直接读出来的事实，
+        # 不是对错因的猜测。学生拿不到「改哪一行」，至少能知道「错成什么样」。
+        pattern = symptom.get("pattern") or []
+        if pattern:
+            lines.append("从失败的样子能看出：")
+            for note in pattern:
+                lines.append(f"  · {note}")
+            lines.append("")
+
         if diagnosis.candidates_total == 0:
-            lines.append(
-                "这份代码里没有系统能识别的单点错误模式（比如比较符写反、常量差一）。"
-                "错误更可能是结构性的（算法思路、数据结构选择），"
-                "这种情况系统不做猜测。"
-            )
+            if pattern:
+                lines.append("系统在这份代码里找不到「只改一处」就能修好的地方，所以不做猜测。")
+            else:
+                lines.append(
+                    "这份代码里没有系统能识别的单点错误模式（比如比较符写反、常量差一）。"
+                    "错误更可能是结构性的（算法思路、数据结构选择），"
+                    "这种情况系统不做猜测。"
+                )
         else:
             lines.append(
                 f"系统试了 {diagnosis.candidates_tried} 个单点修复候选都没能让全部用例通过。"

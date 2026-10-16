@@ -239,7 +239,7 @@ OPERATORS: dict[str, OperatorSpec] = {
         ),
         OperatorSpec(
             key="condition_negation_drop",
-            label="条件判断取反",
+            label="漏写 not（条件方向反了）",
             description="漏写 not，条件方向反了",
             matcher=_droppable_not_matcher,
             mutator=_drop_not,

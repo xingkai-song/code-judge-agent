@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from code_judge.diagnosis import Diagnoser  # noqa: E402
 from code_judge.problems import load_library  # noqa: E402
 from code_judge.references import load_references  # noqa: E402
+from code_judge.mutation.dataset import load_mutants  # noqa: E402
 from code_judge.mutation.engine import generate_mutants  # noqa: E402
 from code_judge.sandbox import default_sandbox  # noqa: E402
 from code_judge.tutoring.session import TutorSession  # noqa: E402
@@ -173,20 +174,47 @@ def run_demo(session: TutorSession) -> int:
 
 
 def _demo_submission(session: TutorSession, rec) -> str:
-    """演示用提交：拿参考解注入目标错因，模拟一个真实学生会犯的错。"""
-    refs_path = ROOT / "solutions" / "humaneval.jsonl"
-    if refs_path.exists():
-        refs = load_references(refs_path)
-        ref = refs.get(rec.problem_id)
-        if ref is not None:
-            mutants = generate_mutants(
-                ref.source, operators=[rec.target_skill], max_per_operator=1
-            )
-            if mutants:
-                return mutants[0].source
-    # 没有参考解就退回「函数体写 pass」
+    """演示用提交：挑一份「诊断得出来」的典型错误，模拟真实学生会犯的错。
+
+    优先从变异数据集里挑已经验证过会失败的样本——它们比现场注入更接近真实提交，
+    而且我们现场试几条，选第一条诊断能给结论的：演示的价值就在于让人看到
+    结论长什么样，而不是展示「未定位」。
+    """
     problem = session.problem(rec.problem_id)
-    return session.starter_code(problem) if problem else "def solution():\n    pass\n"
+    dataset = ROOT / "eval" / "datasets" / "mutants.jsonl"
+    if problem is not None and dataset.exists():
+        candidates = [
+            mutant
+            for mutant in load_mutants(dataset)
+            if mutant.problem_id == rec.problem_id and mutant.operator == rec.target_skill
+        ]
+        # 超时样本诊断要等满超时才失败，演示优先用答案错误那种
+        candidates.sort(key=lambda m: 0 if m.verdict == "WA" else 1)
+        fallback = None
+        for mutant in candidates[:5]:
+            diagnosis = session.diagnoser.diagnose(mutant.source, problem)
+            if not diagnosis.verified:
+                continue
+            if diagnosis.operator == rec.target_skill:
+                return mutant.source  # 诊断出来的错因和这道题要练的技能一致，最适合演示
+            fallback = fallback or mutant.source
+        if fallback:
+            return fallback
+        if candidates:
+            return candidates[0].source
+
+    # 数据集里没有对应样本时，退回「拿参考解现场注入」的旧办法
+    for refs_path in sorted((ROOT / "solutions").glob("*.jsonl")):
+        ref = load_references(refs_path).get(rec.problem_id)
+        if ref is None:
+            continue
+        mutants = generate_mutants(
+            ref.source, operators=[rec.target_skill], max_per_operator=1
+        )
+        if mutants:
+            return mutants[0].source
+    # 没有参考解就退回「函数体写 pass」
+    return session.starter_code(problem) if problem else "print(0)\n"
 
 
 def repl(session: TutorSession) -> int:

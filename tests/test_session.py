@@ -153,6 +153,22 @@ def test_starter_code_contains_the_signature(tmp_path: Path):
     assert "def solve(x)" in code
 
 
+def test_starter_code_for_statement_without_signature(tmp_path: Path):
+    """题面只有一句描述、没有函数签名时（MBPP 那类），要自己编出可运行的骨架。"""
+    session = _session(tmp_path)
+    problem = Problem(
+        id="P3",
+        title="没有签名的题",
+        statement="Write a function to add two numbers.",
+        kind=ProblemKind.ASSERT,
+        entry_point="add_two",
+        cases=[CaseSpec(id="c1", assert_code="assert add_two(1, 2) == 3")],
+    )
+    code = session.starter_code(problem)
+    compile(code, "<starter>", "exec")  # 生成的骨架必须是合法 Python
+    assert "def add_two(arg1, arg2):" in code
+
+
 def test_profile_report_mentions_the_weakest_skill(tmp_path: Path):
     session = _session(tmp_path)
     for _ in range(3):

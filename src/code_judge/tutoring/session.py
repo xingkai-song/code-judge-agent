@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import ast
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -87,6 +88,9 @@ class TutorSession:
         """给出一份起步模板，让用户不必凭空猜函数签名。"""
         if problem.kind is ProblemKind.ASSERT:
             # HumanEval 的题面本身就是「函数签名 + docstring」，直接当模板最省事
+            if not _has_function_def(problem.statement):
+                # MBPP 的题面只有一句自然语言描述，没有签名，只能按入口函数名搭骨架
+                return _skeleton(problem)
             return problem.statement.rstrip() + "\n    pass\n"
         return ""
 
@@ -187,3 +191,53 @@ class TutorSession:
             lines.append(f"当前最需要加强：{weakest.label}"
                          f"（掌握度 {weakest.mean:.0%}，练过 {weakest.opportunities} 次）")
         return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
+# 起步模板的辅助函数
+# --------------------------------------------------------------------------- #
+
+
+def _has_function_def(text: str) -> bool:
+    """题面本身是不是一段可解析的 Python（HumanEval 就是这种）。"""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    return any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) for node in ast.walk(tree)
+    )
+
+
+def _skeleton(problem: Problem) -> str:
+    """为「题面只有一句描述」的题（MBPP）搭一个能直接跑的函数骨架。"""
+    count = _guess_param_count(problem)
+    params = ", ".join(f"arg{i + 1}" for i in range(count)) if count is not None else "*args"
+    return (
+        f"# {problem.statement.strip()}\n"
+        f"# 需要实现的函数：{problem.entry_point}\n"
+        f"def {problem.entry_point}({params}):\n"
+        f"    pass\n"
+    )
+
+
+def _guess_param_count(problem: Problem) -> int | None:
+    """从用例里数出入口函数被调用时传了几个位置参数。
+
+    MBPP 的断言直接按函数名调用（``assert f(x) == y``），
+    数一数调用点就能给出一个参数个数正确的骨架，比 ``*args`` 友好。
+    """
+    for case in problem.cases:
+        try:
+            tree = ast.parse(case.assert_code)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == problem.entry_point
+                and not node.keywords
+            ):
+                return len(node.args)
+    return None

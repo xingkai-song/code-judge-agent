@@ -49,13 +49,14 @@ class Recommender:
         ranked = self.mastery.weakest(profile, limit=len(self.labels) or 11)
         done = profile.attempted_problem_ids
         used_skills: set[str] = set()
+        chosen: set[str] = set()
         fresh: list[Recommendation] = []
         repeats: list[Recommendation] = []
 
         for skill in ranked:
             if skill.skill in used_skills:
                 continue
-            pick = self._pick_problem(skill.skill, done, profile)
+            pick = self._pick_problem(skill.skill, done, profile, exclude=chosen)
             if pick is None:
                 continue
             problem_id, repeat, candidates = pick
@@ -70,11 +71,11 @@ class Recommender:
                 candidate_count=candidates,
                 repeat=repeat,
             )
-            # 同一道题可能同时覆盖多项技能，去重
-            bucket = repeats if repeat else fresh
-            if any(r.problem_id == problem_id for r in bucket):
-                continue
+            # 同一道题可能同时覆盖多项技能：把已经推过的题排除掉，
+            # 让下面几个技能换一道题，而不是白白浪费一个推荐位。
             used_skills.add(skill.skill)
+            chosen.add(problem_id)
+            bucket = repeats if repeat else fresh
             bucket.append(recommendation)
 
         # 没做过的题优先推荐；只有在新题不够时才回头推做过的（复测）
@@ -83,13 +84,19 @@ class Recommender:
     # -- 内部 ---------------------------------------------------------------
 
     def _pick_problem(
-        self, skill: str, done: set[str], profile: LearnerProfile
+        self,
+        skill: str,
+        done: set[str],
+        profile: LearnerProfile,
+        exclude: set[str] | None = None,
     ) -> tuple[str, bool, int] | None:
         pool = [
             (pid, skills)
             for pid, skills in self.problem_skills.items()
             if skill in skills
         ]
+        if exclude:
+            pool = [item for item in pool if item[0] not in exclude]
         if not pool:
             return None
 

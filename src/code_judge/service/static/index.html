@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>编程题诊断与陪练</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>编程题诊断与陪练</h1>
+      <span id="status" class="status">正在加载题库…</span>
+    </div>
+    <div class="who">
+      <input id="user" placeholder="你的名字" autocomplete="off" spellcheck="false">
+      <button id="profile-btn" class="ghost">我的档案</button>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <div class="aside-head">
+        <h2>推荐练习</h2>
+        <button id="refresh" class="ghost small">换一批</button>
+      </div>
+      <ol id="reco" class="reco"></ol>
+      <p class="hint">推荐依据是你诊断出来的薄弱技能，练得越少越优先。</p>
+    </aside>
+
+    <section class="work">
+      <div id="empty" class="empty">
+        <p>左边挑一道题开始。</p>
+        <p class="muted">写好代码点「提交」，判题失败时系统会实跑验证出你错在哪一行。</p>
+      </div>
+
+      <article id="problem" hidden>
+        <div class="problem-head">
+          <h2 id="p-title">—</h2>
+          <div id="p-meta" class="meta"></div>
+        </div>
+        <details id="p-statement-box" class="statement">
+          <summary>题目描述</summary>
+          <pre id="p-statement"></pre>
+        </details>
+        <div class="editor-wrap">
+          <textarea id="editor" spellcheck="false"></textarea>
+        </div>
+        <div class="actions">
+          <button id="submit" class="primary">提交</button>
+          <button id="reset" class="ghost">还原模板</button>
+          <span id="submit-hint" class="muted"></span>
+        </div>
+        <div id="result" class="result" hidden></div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="profile-dialog">
+    <div class="dialog-head">
+      <h2 id="profile-title">我的档案</h2>
+      <button id="profile-close" class="ghost small">关闭</button>
+    </div>
+    <div id="profile-body" class="profile-body"></div>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

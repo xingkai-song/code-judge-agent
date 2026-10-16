@@ -8,8 +8,10 @@ __pycache__/
 .env
 # 原始数据集可用 scripts/import_datasets.py 重新下载，不入库
 data/raw/
-# 评测报告是跑出来的，不入库（数据集本身入库，见 eval/datasets/）
+# 评测报告是跑出来的，不入库
 eval/results/
+# 变异数据集也是产物：76MB，且能用 scripts/mutate.py 从题库重新生成（见 README）
+eval/datasets/mutants.jsonl
 # 学习者的作答记录与代码文件属于个人数据，不入库
 workspace/
 *.o

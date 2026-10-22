@@ -1,0 +1,22 @@
+name: Import repository bundle
+on:
+  push:
+    paths:
+      - 'code-judge-agent.bundle'
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import repository source
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git clone code-judge-agent.bundle /tmp/import
+          cd /tmp/import
+          git remote remove origin
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/source
